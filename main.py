@@ -15,9 +15,6 @@ logger = setup_logger()
 import logging
 import os
 os.environ['WDM_LOG_LEVEL'] = '1'  # 0=Silent, 1=Errors, 2=Warnings, 3=Info
-import json
-from dotenv import load_dotenv
-load_dotenv()  # Load environment variables
 
 
 # Configure Chrome options 
@@ -38,12 +35,14 @@ google_creds = os.getenv('GOOGLE_SHEETS_CREDENTIALS')
 if not google_creds:
     raise ValueError("Google Sheets credentials not found in environment variables")
 
-# Parse the JSON string from environment variable
-creds_dict = json.loads(google_creds)
+# Write credentials to a temporary file
+import json
+with open('credentials.json', 'w') as f:
+    f.write(google_creds)
 
-# Initialize SheetsManager with the parsed credentials
+# Initialize SheetsManager with the temporary file
 sheets = SheetsManager(
-    credentials_dict=creds_dict,  # Assuming your SheetsManager can take dict
+    json_keyfile="credentials.json",
     spreadsheet_name="Auction Listings"
 )
 

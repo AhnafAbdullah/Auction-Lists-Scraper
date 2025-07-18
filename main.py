@@ -20,7 +20,6 @@ from dotenv import load_dotenv
 load_dotenv()  # Load environment variables
 
 
-
 # Configure Chrome options 
 options = webdriver.ChromeOptions()
 options.add_argument("--headless=new")  # Critical for GitHub Actions
@@ -290,4 +289,5 @@ if __name__ == "__main__":
         exit(0)  # Success exit code
     except Exception as e:
         logger.critical(f"Fatal error in main execution: {str(e)}", exc_info=True)
+        driver.quit()
         exit(1)  # Error exit code

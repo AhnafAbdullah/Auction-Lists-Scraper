@@ -31,14 +31,9 @@ options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) Apple
 # Initialize WebDriver
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 
-# Get credentials from file
-credentials_file = "credentials.json"
-if not os.path.exists(credentials_file):
-    raise ValueError(f"Credentials file {credentials_file} not found")
-
-# Initialize SheetsManager with the credentials file
+# Initialize SheetsManager (replace your old Sheets code with this)
 sheets = SheetsManager(
-    json_keyfile=credentials_file,
+    json_keyfile="auction-list-scraper-466209-d7175bf9b308.json",
     spreadsheet_name="Auction Listings"
 )
 

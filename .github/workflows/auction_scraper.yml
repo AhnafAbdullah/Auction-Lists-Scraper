@@ -30,18 +30,8 @@ jobs:
           pip install -r requirements.txt
           pip list  # Log installed packages for debugging
 
-      - name: Set up Google Sheets credentials
-        run: |
-          printf '%s' "${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}" > credentials.json
-          ls -l credentials.json  # Debug: Verify file creation
-          cat credentials.json   # Debug: Verify file content (redact sensitive info in logs)
-
       - name: Run scraper
         run: python main.py
-
-      - name: Clean up credentials
-        run: rm credentials.json
-        if: always()
 
       - name: Upload logs
         if: always()

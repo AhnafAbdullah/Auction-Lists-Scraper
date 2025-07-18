@@ -11,13 +11,14 @@ import math
 from datetime import datetime
 from sheets_manager import SheetsManager
 from logger import setup_logger
-logger = setup_logger()
 import logging
 import os
+import json
+
+logger = setup_logger()
 os.environ['WDM_LOG_LEVEL'] = '1'  # 0=Silent, 1=Errors, 2=Warnings, 3=Info
 
-
-# Configure Chrome options 
+# Configure Chrome options
 options = webdriver.ChromeOptions()
 options.add_argument("--headless=new")  # Critical for GitHub Actions
 options.add_argument("--no-sandbox")
@@ -27,41 +28,37 @@ options.add_argument("--window-size=1920,1080")
 options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-# Initialize WebDriver with all warnings all logged
+# Initialize WebDriver
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 
-# Get credentials from environment variable
-google_creds = os.getenv('GOOGLE_SHEETS_CREDENTIALS')
-if not google_creds:
-    raise ValueError("Google Sheets credentials not found in environment variables")
+# Get credentials from file
+credentials_file = "credentials.json"
+if not os.path.exists(credentials_file):
+    raise ValueError(f"Credentials file {credentials_file} not found")
 
-# Write credentials to a temporary file
-import json
-with open('credentials.json', 'w') as f:
-    f.write(google_creds)
-
-# Initialize SheetsManager with the temporary file
+# Initialize SheetsManager with the credentials file
 sheets = SheetsManager(
-    json_keyfile="credentials.json",
+    json_keyfile=credentials_file,
     spreadsheet_name="Auction Listings"
 )
 
+new_rows_count = 0
+updated_rows_count = 0
+
 def scrapeData(website_link, county):
+    global new_rows_count, updated_rows_count
     driver.get(website_link)
     driver.implicitly_wait(30)
 
-    # Getting data for the current month + next 2 months (to get at least 60 days advance)
+    # Getting data for the current month + next 2 months
     for k in range(3):
-        # Get the count of auction dates first to avoid stale references
         date_elements = driver.find_elements(By.CSS_SELECTOR, ".CALBOX[role='link'], .CALBOX.CALSELF")
         num_auctions = len(date_elements)
 
-        # for each auction in the current month
         for i in range(num_auctions):
             try:
-                # Re-find elements each iteration to avoid staleness
                 current_dates = driver.find_elements(By.CSS_SELECTOR, ".CALBOX[role='link'], .CALBOX.CALSELF")
-                if i >= len(current_dates):  # Safety check
+                if i >= len(current_dates):
                     break
 
                 date_box = current_dates[i]
@@ -70,16 +67,14 @@ def scrapeData(website_link, county):
                 if this_date < datetime.today().date():
                     continue
 
-                # Click directly on the date box in each auction closure of the current month
                 date_box.click()
                 print(date)
 
                 try_again_count = 3
-                current_url = driver.current_url  # Save the initial URL
+                current_url = driver.current_url
 
                 while try_again_count > 0:
                     try:
-                        # Wait for max pages element
                         max_pages = WebDriverWait(driver, 30).until(
                             EC.visibility_of_element_located((By.ID, "maxWA"))
                         ).text
@@ -87,29 +82,18 @@ def scrapeData(website_link, county):
 
                         max_pages = int(max_pages)
                         for j in range(max_pages):
-                            # Find the auction container
                             auction_container = driver.find_element(By.ID, "Area_W")
-
-                            # Loop over all auction items
                             auction_elements = auction_container.find_elements(By.CSS_SELECTOR, "div.AUCTION_ITEM")
                             num_auction_items = len(auction_elements)
                             for x in range(num_auction_items):
                                 auction = auction_elements[x]
-                                # 1. Get the STATUS CONTAINER (always exists)
                                 status_container = auction.find_element(By.CSS_SELECTOR, "div.AUCTION_STATS")
-
-                                # 2. Get BOTH elements (label + dynamic value)
                                 try:
-                                    # The label element (may say "Auction Status" or "Auction Sold")
                                     status_label = status_container.find_element(By.CSS_SELECTOR, "div.ASTAT_MSGA").text
-
-                                    # The dynamic value element (contains actual status like "07/07/2025 09:01 AM ET")
                                     status_value = status_container.find_element(By.CSS_SELECTOR, "div.ASTAT_MSGB").text
-
                                     print(f"Raw Label: {status_label} | Status Value: {status_value}")
 
                                     status_text = ""
-                                    # 3. Determine true status
                                     if "Sold" in status_label:
                                         status_text = "Auction Sold"
                                     else:
@@ -117,76 +101,57 @@ def scrapeData(website_link, county):
                                             status_text = "Auction Starts"
                                         elif "Cancelled" in status_value:
                                             status_text = "Status Cancelled"
-
                                 except NoSuchElementException:
                                     print("Could not parse auction status")
 
-                                if status_label == "Auction Starts":
-                                    # Find the table and get all rows
+                                if status_text == "Auction Starts":
                                     table = auction.find_element(By.CSS_SELECTOR, "table.ad_tab")
                                     rows = table.find_elements(By.TAG_NAME, "tr")
-
-                                    # Get last 3 rows (Appraised Value, Opening Bid, Deposit Requirement)
                                     last_three_rows = rows[-3:] if len(rows) >= 3 else rows
-
-                                    # Extract the data from each row's td.AD_DTA
-                                    appraised_value = last_three_rows[0].find_element(By.CSS_SELECTOR,
-                                                                                      "td.AD_DTA").text.strip()
-                                    opening_bid = last_three_rows[1].find_element(By.CSS_SELECTOR,
-                                                                                  "td.AD_DTA").text.strip()
-                                    deposit_requirement = last_three_rows[2].find_element(By.CSS_SELECTOR,
-                                                                                          "td.AD_DTA").text.strip()
-
-                                    address_line0 = rows[3].find_element(By.CSS_SELECTOR,
-                                                                          "td.AD_DTA").text.strip()  # 5th last row (often city/state/zip)
-                                    address_line1 = rows[-4].find_element(By.CSS_SELECTOR,
-                                                                          "td.AD_DTA").text.strip()  # 4th last row
-                                    # Combine address lines
+                                    appraised_value = last_three_rows[0].find_element(By.CSS_SELECTOR, "td.AD_DTA").text.strip()
+                                    opening_bid = last_three_rows[1].find_element(By.CSS_SELECTOR, "td.AD_DTA").text.strip()
+                                    deposit_requirement = last_three_rows[2].find_element(By.CSS_SELECTOR, "td.AD_DTA").text.strip()
+                                    address_line0 = rows[3].find_element(By.CSS_SELECTOR, "td.AD_DTA").text.strip()
+                                    address_line1 = rows[-4].find_element(By.CSS_SELECTOR, "td.AD_DTA").text.strip()
                                     full_address = f"{address_line0} {address_line1}".strip()
 
-                                    # Clean and convert values
                                     clean_value = float(appraised_value.replace("$", "").replace(",", ""))
                                     opening_bid_float = float(opening_bid.replace("$", "").replace(",", ""))
-
                                     deposit_clean = deposit_requirement.replace("$", "").replace(",", "")
 
-                                    # Calculate expected 2/3 value (all the different variations present in data)
                                     check_value_1 = round(2 / 3 * clean_value, 0)
                                     check_value_2 = round(2 / 3 * clean_value, 2)
                                     check_value_3 = check_value_1 + 1.0
                                     check_value_4 = check_value_2 - 0.1
                                     check_value_5 = check_value_2 + 0.1
 
-                                    # Filter conditions
                                     is_property_tax_sale = (
-                                            clean_value == 0 or
-                                            (opening_bid_float != check_value_1 and opening_bid_float != check_value_2 and opening_bid_float != check_value_3 and opening_bid_float != check_value_4 and opening_bid_float != check_value_5) or
-                                            deposit_clean not in ["2000.00", "5000.00", "10000.00"]
+                                        clean_value == 0 or
+                                        (opening_bid_float != check_value_1 and opening_bid_float != check_value_2 and 
+                                         opening_bid_float != check_value_3 and opening_bid_float != check_value_4 and 
+                                         opening_bid_float != check_value_5) or
+                                        deposit_clean not in ["2000.00", "5000.00", "10000.00"]
                                     )
 
                                     if is_property_tax_sale:
-                                        # Format date exactly as MM-DD-YYYY
                                         formatted_date = this_date.strftime("%m-%d-%Y")
-
-                                        # Generate proper link (using case number if available)
                                         try:
                                             case_num = rows[1].find_element(By.CSS_SELECTOR, "td.AD_DTA").text.strip()
                                             link = f"{website_link}&case={case_num}"
                                         except Exception:
-                                            link = website_link  # Fallback to base URL
+                                            link = website_link
 
-                                        # Add to Google Sheets (with duplicate protection)
-                                        added = sheets.add_auction(
+                                        new, updated = sheets.add_auction(
                                             date=formatted_date,
                                             county=county,
                                             address=full_address,
                                             link=link
                                         )
-
-                                        if added:
-                                            print(
-                                                f"✓ Added to Sheets: {formatted_date} | {county} | {full_address[:50]}...")
-                                        else:
+                                        if new:
+                                            new_rows_count += 1
+                                            print(f"✓ Added to Sheets: {formatted_date} | {county} | {full_address[:50]}...")
+                                        elif updated:
+                                            updated_rows_count += 1
                                             print(f"⏩ Duplicate skipped: {full_address[:50]}...")
 
                             try:
@@ -194,14 +159,13 @@ def scrapeData(website_link, county):
                                 next_page.click()
                                 time.sleep(2)
                             except NoSuchElementException:
-                                break  # End of pagination
+                                break
 
-                        break  # Success - exit retry loop
+                        break
 
                     except TimeoutException:
                         try_again_count -= 1
                         print(f"Loading failed. Retries remaining: {try_again_count}")
-
                         if try_again_count > 0:
                             try:
                                 x -= 1
@@ -210,7 +174,7 @@ def scrapeData(website_link, county):
                             driver.get(current_url)
                         else:
                             if 'x' not in locals() and 'i' in locals():
-                                logger.error(f"Auction failed | County: {county} | Date: {date} | Error: The website elements failed to load in time",exc_info=True)
+                                logger.error(f"Auction failed | County: {county} | Date: {date} | Error: The website elements failed to load in time", exc_info=True)
                     except Exception as e:
                         print(f"Unexpected error: {str(e)}")
                         try_again_count -= 1
@@ -223,8 +187,7 @@ def scrapeData(website_link, county):
                             time.sleep(3)
                         else:
                             if 'x' not in locals() and 'i' in locals():
-                                logger.error(f"Auction failed | County: {county} | Date: {date} | Error: The website elements failed to load in time", exc_info = True)
-                # Go back and wait for calendar to reload
+                                logger.error(f"Auction failed | County: {county} | Date: {date} | Error: The website elements failed to load in time", exc_info=True)
                 driver.back()
                 WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, ".CALDAYBOX")))
@@ -244,12 +207,9 @@ def scrapeData(website_link, county):
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "div.CALNAV a[aria-label^='Next Month']"))
             )
             next_month.click()
-
         except (TimeoutException, NoSuchElementException):
             print("No more months available")
-            break  # Exit if no next month button
-
-
+            break
 
 counties = [
     "adams", "allen", "ashland", "ashtabula", "athens", "auglaize", "belmont",
@@ -267,26 +227,22 @@ counties = [
     "wayne", "williams", "wood", "wyandot"
 ]
 
-# Add this at the very end of your script (after driver.quit())
 if __name__ == "__main__":
     try:
-        # Scrape all counties
         for county in counties:
             website_link = f"https://{county}.sheriffsaleauction.ohio.gov/index.cfm?zaction=USER&zmethod=CALENDAR"
             logger.info(f"Starting scrape for {county.upper()} county")
-
             try:
                 scrapeData(website_link, county)
             except Exception as e:
                 logger.error(f"COUNTY-WIDE FAILURE: {county} | URL: {website_link} | Error: {str(e)}", exc_info=True)
-                continue  # Continue with next county even if one fails
+                continue
             finally:
-                time.sleep(2)  # Delay between counties
+                time.sleep(2)
+        logger.info(f"Scraping completed: {new_rows_count} new rows added, {updated_rows_count} rows updated")
         driver.quit()
-        
-        logger.info("Scraping completed successfully")
-        exit(0)  # Success exit code
+        exit(0)
     except Exception as e:
         logger.critical(f"Fatal error in main execution: {str(e)}", exc_info=True)
         driver.quit()
-        exit(1)  # Error exit code
+        exit(1)

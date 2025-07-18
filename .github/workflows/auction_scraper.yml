@@ -2,13 +2,14 @@ name: Auction Scraper Automation
 
 on:
   schedule:
-    # Runs every 48 hours (at 00:00 UTC)
+    # Runs every 48 hours at 00:00 UTC
     - cron: '0 0 */2 * *'
   workflow_dispatch: # Allows manual triggering
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hour timeout (scraping 88 counties may take time)
     
     steps:
     - name: Checkout repository
@@ -24,15 +25,21 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
+    - name: Install Chrome
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y chromium-browser
+        
     - name: Run scraper
       env:
         GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
       run: python main.py
       
-    - name: Commit and push changes if any
-      run: |
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "actions@github.com"
-        git add .
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Automated update: $(date +'%Y-%m-%d %H:%M:%S')" && git push)
-        
+    - name: Upload logs
+      if: always()  # Upload logs even if job fails
+      uses: actions/upload-artifact@v3
+      with:
+        name: scraper-logs
+        path: |
+          *.log
+          logs/

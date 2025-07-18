@@ -15,21 +15,38 @@ logger = setup_logger()
 import logging
 import os
 os.environ['WDM_LOG_LEVEL'] = '1'  # 0=Silent, 1=Errors, 2=Warnings, 3=Info
+import json
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables
 
 
 
-# Configure Chrome options (unchanged from your original)
+# Configure Chrome options 
 options = webdriver.ChromeOptions()
-options.add_experimental_option("detach", True)
-options.add_argument("start-maximized")
+options.add_argument("--headless=new")  # Critical for GitHub Actions
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--disable-gpu")
+options.add_argument("--window-size=1920,1080")
 options.add_argument("--disable-blink-features=AutomationControlled")
-options.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
-options.add_experimental_option("excludeSwitches", ["enable-automation"])
-options.add_experimental_option('useAutomationExtension', False)
+options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 # Initialize WebDriver with all warnings all logged
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+
+# Get credentials from environment variable
+google_creds = os.getenv('GOOGLE_SHEETS_CREDENTIALS')
+if not google_creds:
+    raise ValueError("Google Sheets credentials not found in environment variables")
+
+# Parse the JSON string from environment variable
+creds_dict = json.loads(google_creds)
+
+# Initialize SheetsManager with the parsed credentials
+sheets = SheetsManager(
+    credentials_dict=creds_dict,  # Assuming your SheetsManager can take dict
+    spreadsheet_name="Auction Listings"
+)
 
 # Initialize SheetsManager (replace your old Sheets code with this)
 sheets = SheetsManager(
@@ -270,3 +287,24 @@ for county in counties:
     finally:
         time.sleep(2)  # Delay between counties
 driver.quit()
+# Add this at the very end of your script (after driver.quit())
+if __name__ == "__main__":
+    try:
+        # Scrape all counties
+        for county in counties:
+            website_link = f"https://{county}.sheriffsaleauction.ohio.gov/index.cfm?zaction=USER&zmethod=CALENDAR"
+            logger.info(f"Starting scrape for {county.upper()} county")
+
+            try:
+                scrapeData(website_link, county)
+            except Exception as e:
+                logger.error(f"COUNTY-WIDE FAILURE: {county} | URL: {website_link} | Error: {str(e)}", exc_info=True)
+                continue  # Continue with next county even if one fails
+            finally:
+                time.sleep(2)  # Delay between counties
+        
+        logger.info("Scraping completed successfully")
+        exit(0)  # Success exit code
+    except Exception as e:
+        logger.critical(f"Fatal error in main execution: {str(e)}", exc_info=True)
+        exit(1)  # Error exit code

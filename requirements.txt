@@ -1,24 +1,5 @@
-# Core web scraping
 selenium==4.15.2
 webdriver-manager==4.0.1
-
-# Google Sheets integration
 gspread==5.11.4
 oauth2client==4.1.3
 gspread-formatting==1.1.2
-
-# Environment management
-python-dotenv==1.0.0
-
-# Date/time handling
-python-dateutil==2.8.2
-pytz==2023.3.post1
-
-# Error handling
-retrying==1.3.4
-
-# Logging
-loguru==0.7.2  # Alternative to standard logging (optional)
-
-# Utilities
-tzlocal==5.1.1

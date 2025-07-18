@@ -32,7 +32,9 @@ jobs:
 
       - name: Set up Google Sheets credentials
         run: |
-          echo "${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}" > credentials.json
+          printf '%s' "${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}" > credentials.json
+          ls -l credentials.json  # Debug: Verify file creation
+          cat credentials.json   # Debug: Verify file content (redact sensitive info in logs)
 
       - name: Run scraper
         run: python main.py

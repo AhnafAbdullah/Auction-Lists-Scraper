@@ -22,7 +22,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser chromedriver
+          sudo apt-get install -y chromium-browser
 
       - name: Install Python dependencies
         run: |
@@ -35,8 +35,6 @@ jobs:
           echo "${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}" > credentials.json
 
       - name: Run scraper
-        env:
-          CHROMEDRIVER_PATH: /usr/bin/chromedriver
         run: python main.py
 
       - name: Clean up credentials

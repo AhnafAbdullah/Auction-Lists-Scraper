@@ -48,12 +48,6 @@ sheets = SheetsManager(
     spreadsheet_name="Auction Listings"
 )
 
-# Initialize SheetsManager (replace your old Sheets code with this)
-sheets = SheetsManager(
-    json_keyfile="credentials.json",
-    spreadsheet_name="Auction Listings"
-)
-
 def scrapeData(website_link, county):
     driver.get(website_link)
     driver.implicitly_wait(30)
@@ -275,18 +269,6 @@ counties = [
     "wayne", "williams", "wood", "wyandot"
 ]
 
-# Scrape all counties
-for county in counties:
-    website_link = f"https://{county}.sheriffsaleauction.ohio.gov/index.cfm?zaction=USER&zmethod=CALENDAR"
-    logger.info(f"Starting scrape for {county.upper()} county")
-
-    try:
-        scrapeData(website_link, county)
-    except Exception as e:
-        logger.error(f"COUNTY-WIDE FAILURE: {county} | URL: {website_link} | Error: {str(e)}", exc_info=True)
-    finally:
-        time.sleep(2)  # Delay between counties
-driver.quit()
 # Add this at the very end of your script (after driver.quit())
 if __name__ == "__main__":
     try:
@@ -302,6 +284,7 @@ if __name__ == "__main__":
                 continue  # Continue with next county even if one fails
             finally:
                 time.sleep(2)  # Delay between counties
+        driver.quit()
         
         logger.info("Scraping completed successfully")
         exit(0)  # Success exit code

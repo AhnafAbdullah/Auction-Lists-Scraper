@@ -91,3 +91,39 @@ class SheetsManager:
         except Exception as e:
             self.logger.error(f"Error adding auction: {str(e)}")
             return False
+
+    def remove_expired_auctions(self):
+        """Deletes rows where auction date is older than today"""
+        try:
+            today = datetime.now().date()
+            records = self.sheet.get_all_records()
+            rows_to_delete = []
+
+            # Check each row (starting from row 2)
+            for i, row in enumerate(records, start=2):
+                auction_date = datetime.strptime(row["Auction Date"], "%m-%d-%Y").date()
+                if auction_date < today:
+                    rows_to_delete.append(i)
+
+            # Delete from bottom to avoid index shifting
+            for row_num in sorted(rows_to_delete, reverse=True):
+                self.sheet.delete_rows(row_num)
+
+            self.logger.info(f"Removed {len(rows_to_delete)} expired auctions")
+            return len(rows_to_delete)
+
+        except Exception as e:
+            self.logger.error(f"Failed to remove expired auctions: {str(e)}")
+            return 0
+
+    def get_existing_auctions(self):
+        """Returns dict of {auction_key: row_number} for all current auctions"""
+        records = self.sheet.get_all_records()
+        return {
+            self._create_auction_key(row): i + 2  # +2 for header and 1-based index
+            for i, row in enumerate(records)
+        }
+
+    def _create_auction_key(self, row):
+        """Creates unique key from auction data"""
+        return f"{row['Auction Date']}_{row['County'].lower()}_{row['Address'].strip().lower()}"

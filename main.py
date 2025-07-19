@@ -199,7 +199,7 @@ def scrapeData(website_link, county):
                                         })
                                         active_auctions.add(unique_key)  # Works for both new and existing auctions
 
-                                        time.sleep(1) # sleep a second to not exceed sheets writing quota per user
+                                        time.sleep(2) # sleep a second to not exceed sheets writing quota per user
 
                             try:
                                 next_page = driver.find_element(By.CSS_SELECTOR, "span.PageRight > img")

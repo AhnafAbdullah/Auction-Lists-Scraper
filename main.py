@@ -17,25 +17,36 @@ import os
 os.environ['WDM_LOG_LEVEL'] = '1'  # 0=Silent, 1=Errors, 2=Warnings, 3=Info
 
 
-
 # Configure Chrome options (unchanged from your original)
 options = webdriver.ChromeOptions()
-options.add_experimental_option("detach", True)
-options.add_argument("start-maximized")
+# Headless configuration
+options.add_argument("--headless=new")  # Modern headless mode
+options.add_argument("--no-sandbox")  # Essential for CI/CD
+options.add_argument("--disable-dev-shm-usage")  # Prevents memory issues
+options.add_argument("--disable-gpu")  # Recommended for headless
+options.add_argument("--window-size=1920,1080")  # Virtual display size
+
+# Anti-detection settings
 options.add_argument("--disable-blink-features=AutomationControlled")
-options.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
+options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
 options.add_experimental_option('useAutomationExtension', False)
+
 
 # Initialize WebDriver with all warnings all logged
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 
 # Initialize SheetsManager (replace your old Sheets code with this)
 sheets = SheetsManager(
-    json_keyfile="auction-list-scraper-466209-d7175bf9b308.json",
+    json_keyfile="auction-list-scraper-466209-8e731da0fa26.json",
     spreadsheet_name="Auction Listings"
 )
+# 2. Remove expired auctions
+sheets.remove_expired_auctions()
+
+# 3. Before scraping, storing all the auctions to check later if any was cancelled or withdrawn
+existing_auctions = sheets.get_existing_auctions()  # {key: row_num}
+active_auctions = set()  # Just track active auction keys
 
 def scrapeData(website_link, county):
     driver.get(website_link)
@@ -171,7 +182,7 @@ def scrapeData(website_link, county):
                                             date=formatted_date,
                                             county=county,
                                             address=full_address,
-                                            link=link
+                                            link=current_url
                                         )
 
                                         if added:
@@ -179,6 +190,16 @@ def scrapeData(website_link, county):
                                                 f"✓ Added to Sheets: {formatted_date} | {county} | {full_address[:50]}...")
                                         else:
                                             print(f"⏩ Duplicate skipped: {full_address[:50]}...")
+
+                                        # When finding active auctions, set true in the set:
+                                        unique_key = sheets._create_auction_key({
+                                            "Auction Date": formatted_date,
+                                            "County": county,
+                                            "Address": full_address
+                                        })
+                                        active_auctions.add(unique_key)  # Works for both new and existing auctions
+
+                                        time.sleep(1) # sleep a second to not exceed sheets writing quota per user
 
                             try:
                                 next_page = driver.find_element(By.CSS_SELECTOR, "span.PageRight > img")
@@ -258,17 +279,33 @@ counties = [
     "wayne", "williams", "wood", "wyandot"
 ]
 
-scrapeData("https://butler.sheriffsaleauction.ohio.gov/index.cfm?zaction=USER&zmethod=CALENDAR", "butler")
-
-# Scrape all counties
-for county in counties:
-    website_link = f"https://{county}.sheriffsaleauction.ohio.gov/index.cfm?zaction=USER&zmethod=CALENDAR"
-    logger.info(f"Starting scrape for {county.upper()} county")
-
+if __name__ == "__main__":
     try:
-        scrapeData(website_link, county)
+        for county in counties:
+            website_link = f"https://{county}.sheriffsaleauction.ohio.gov/index.cfm?zaction=USER&zmethod=CALENDAR"
+            logger.info(f"Starting scrape for {county.upper()} county")
+            try:
+                scrapeData(website_link, county)
+            except Exception as e:
+                logger.error(f"COUNTY-WIDE FAILURE: {county} | URL: {website_link} | Error: {str(e)}", exc_info=True)
+                continue
+            finally:
+                time.sleep(2)
+        logger.info(f"Scraping completed: {new_rows_count} new rows added, {updated_rows_count} rows updated")
+
+        # Find auctions to remove (exist in sheet but not in active_auctions)
+        rows_to_delete = [
+            row_num for key, row_num in existing_auctions.items()
+            if key not in active_auctions
+        ]
+        # Delete from bottom to avoid index shifting
+        for row_num in sorted(rows_to_delete, reverse=True):
+            sheets.sheet.delete_rows(row_num)
+            time.sleep(1)  # to not exceed writing quota per user
+
+        driver.quit()
+        exit(0)
     except Exception as e:
-        logger.error(f"COUNTY-WIDE FAILURE: {county} | URL: {website_link} | Error: {str(e)}", exc_info=True)
-    finally:
-        time.sleep(2)  # Delay between counties
-driver.quit()
+        logger.critical(f"Fatal error in main execution: {str(e)}", exc_info=True)
+        driver.quit()
+        exit(1)

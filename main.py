@@ -38,7 +38,7 @@ driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())
 
 # Initialize SheetsManager (replace your old Sheets code with this)
 sheets = SheetsManager(
-    json_keyfile="auction-list-scraper-466209-8e731da0fa26.json",
+    json_keyfile="ohio-auction-scraper-a8173e2637aa.json",
     spreadsheet_name="Auction Listings"
 )
 # 2. Remove expired auctions

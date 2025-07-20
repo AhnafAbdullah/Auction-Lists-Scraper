@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ohio-auction-scraper",
+  "private_key_id": "a8173e2637aaea0eb410e9526e2abf2e02aaa46d",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDIlerurdxJt75c\nA3Iw4qYbo9ov+WnTKK0gNxxJXtQ/gXfsHYLkhdB6JZaexlhcqoSBtAhLA+eyyn+i\nDX9yumv+mnQrx+WphT6AS6MjVBOAGnBpc+v4YcDjEyNAg9tkWCLlz+xV0QSovxb/\n1ZHpsLu6A9cXKL2JfMZUD2AFA8lhBGxgT8JuVFVIU5/qQcu4BcqVQ1j5nSNLbnQb\nBqhEqtGzxt0cJv4R0S82ZM2NCXtaEZ2u2DYPx5pKCkKxF4W9Q2LsvZlShgzeEmtG\n5/s9v6ssqtwpMucaYr+UzUW6YOv4MnOTXJIeT4ORVJNnzHJh/6TnwobWUR3Dan3H\n+CL4ncMxAgMBAAECggEAKaj1c+AZRhhLCZpPn7abMFduLBOdtpUWq/+2OMjgxVXS\n/e+9LVBbldrztwNT+98QiU3GgSoM99XV/2bVRxNP9b/HjAZG/VfmvMe42NAQAsW6\n/jPs2RgYczEY27/nE6a4jMmL+ODiGlgh4z3MweAKhV5h0HYOM51+JZxR4YjBTQw7\nXr6exwT/lP27NZREsdRzb4NvQDzeZPFOMw1nIL/h7MZqYppM/hhxxuuZUAYvg69m\nrVPJF9YPgwW4Y2emKvwBikKg8kI/vVrmRQKDzkVCoaKhH7M18MB5QSXlxoYgoE5d\nT0yIiEf34ZyiS3G6B0n9bjJUUJQ0Ju9ApTBVNKE6dwKBgQDvX9GmIy12UsGvHK6z\nju/nxgaSMWZz1aYU7MV+l2sIZxC/MGClyC8Ig4CpxLdNYVxWhQ+Iz6OjWLuybjdc\nAF2PD/ElSps2cirJOAp4f+QQsiTlGGgI/jj8ZUPfDMnGxSxf+uTYhZRWTqD/SeNW\nIkL8fwd61iVU8oHL3UEZzuidqwKBgQDWhGs8lWiXn0PxD3yAUx4oBbKERAM3QTPF\nI7YAdPxnnCEtIGnw83oTE1kxrdScF7RliIJbRnT7OEOBnf0M2Mus1OfaIVdxNzjX\njt1YS/7GiZVTeH3M/ILytdRoRzjqkVqC3imLe9ofJ0BfzUz6tvVIkkMtH2QvJU9a\n24Jp/qOukwKBgEmOzVLbXn4Mwj34d2rwEqLLhHtqOMyBq86kT7AuAZMMcOX/jMOE\n94cLOf9xVs6ti31+2B43iFaKzuru2Y4pApcS1Aycl4Oso58/3F/ZFRFYXOQVkuqo\njIRq7edd+6dcMd2wsKAktEetU+X/I5/1WVZUBs1lfwVSnDY0YGv43ByPAoGBALDl\n6fi/zMycDc8QUj8QS+H9MMVZwL0kC6kaVc/yqOJYIhOwkyyb26M3ZWpOSvGdqqm/\n9J+IbpdsQl71BeQ+M1eHCtsae51lSH6Z1XYm1Sar9nQq/LK52NKFl2+WrBzjWJxq\n0B+yNqFSIQffqQdnMMZztunS5S7ruZDXS6hU0G35AoGBAKO0QWU/+xgZ3gCqm35V\nGoAUi6T2rOL8TZy2GwAe1pS0whKHSE7YNEf5bdWeO09VzA33NbBx8u9mCg4hGKRq\noEGzb6ON+/FZ27Qsk4r7I4BdB+3MAFQ8kI6jrIaswLllLYrBnAgPQGMul6wOyT1o\nm+V9H9dH7g/14Qa/5RHK3P7H\n-----END PRIVATE KEY-----\n",
+  "client_email": "ali-helper@ohio-auction-scraper.iam.gserviceaccount.com",
+  "client_id": "104879262307679361829",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ali-helper%40ohio-auction-scraper.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

@@ -291,7 +291,7 @@ if __name__ == "__main__":
                 continue
             finally:
                 time.sleep(2)
-        logger.info(f"Scraping completed: {new_rows_count} new rows added, {updated_rows_count} rows updated")
+        #logger.info(f"Scraping completed: {new_rows_count} new rows added, {updated_rows_count} rows updated")
 
         # Find auctions to remove (exist in sheet but not in active_auctions)
         rows_to_delete = [

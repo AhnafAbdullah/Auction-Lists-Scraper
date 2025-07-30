@@ -1,10 +1,10 @@
 name: Auction Scraper Automation
 
 on:
-  schedule:
-    - cron: '0 0 */2 * *'  # Every 48 hours at midnight UTC (5:00 AM PKT)
-  workflow_dispatch:
-
+  # schedule:
+  #   - cron: '0 0 */2 * *'  # Disabled: Previously ran every 48 hours
+  workflow_dispatch:  # Still allows manual runs via GitHub UI
+  
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
